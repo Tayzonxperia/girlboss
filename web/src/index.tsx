@@ -162,9 +162,6 @@ const server = serve({
                         error: validity.message
                     }, { status: 500 });
                 } else if (!validity.failed && validity.attestation) {
-                    return Response.json({
-                        error: "We're at capacity, sorry!"
-                    }, { status: 400 });
                     const User = mongoose.model('User');
                     const user = await User.findOne({ userid: validity.user.userid });
                     const bc = [
@@ -173,8 +170,8 @@ const server = serve({
                             name: 'Daily',
                             message: 'Successfully claimed your daily reward of ',
                             last: user.properties.eco?.daily,
-                            minreward: 100,
-                            maxreward: 500,
+                            minreward: 10,
+                            maxreward: 50,
                             cdmins: 1080
                         },
                         {
@@ -182,8 +179,8 @@ const server = serve({
                             name: 'Work',
                             message: 'You worked hard for ',
                             last: user.properties.eco?.work,
-                            minreward: 50,
-                            maxreward: 250,
+                            minreward: 5,
+                            maxreward: 25,
                             cdmins: 60
                         }
                     ];
