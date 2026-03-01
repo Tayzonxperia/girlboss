@@ -679,8 +679,8 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
         }
     },
     "resolveid": {
-        description: "Resolve a Signal ID by mentioning a user",
-        arguments: ['mention'],
+        description: "Resolve a Signal ID by mentioning a user or providing a UUID",
+        arguments: ['mention / userid'],
         execute: async (envelope, message) => {
             try {
                 const dataMessage = envelope.dataMessage;
@@ -692,13 +692,18 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
                         if (sentMessage && sentMessage.mentions && sentMessage.mentions.length > 0) {
                             mention = sentMessage.mentions[0];
                         }
-                    } catch (err) {
-                        await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
-                        return;
+                    } catch (err) {}
+                }
+                if (!mention) {
+                    const match = parsecommand(message);
+                    const uuidarg = match && match[1] ? match[1].trim() : null;
+                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (uuidarg && uuidRegex.test(uuidarg)) {
+                        mention = { uuid: uuidarg };
                     }
                 }
                 if (!mention && !envelope.syncMessage) {
-                    await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
+                    await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" or "-resolveid <userid>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
                     return;
                 } else if (!mention && envelope.syncMessage) {
                     const syncMessage = envelope.syncMessage;
@@ -708,17 +713,16 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
                     }
                 }
                 if (!mention.uuid) {
-                    await sendresponse('Invalid mention. Please mention a user.', envelope, `${prefix}resolveid`, true);
+                    await sendresponse('Invalid mention. Please mention a user or provide a valid UUID.', envelope, `${prefix}resolveid`, true);
                     return;
                 }
                 const User = mongoose.model('User');
                 const user = await User.findOne({ userid: mention.uuid });
-                envelope.sourceUuid = mention.uuid;
                 if (!user) {
-                    await sendresponse(`User ID for $MENTIONUSER is ${mention.uuid} (${botname} doesn't know this user).`, envelope, `${prefix}resolveid`, false);
+                    await sendresponse(`User ID for $MENTION_${mention.uuid} is ${mention.uuid} (${botname} doesn't know this user).`, envelope, `${prefix}resolveid`, false);
                     return;
                 } else {
-                    await sendresponse(`User ID for $MENTIONUSER is ${mention.uuid}.`, envelope, `${prefix}resolveid`, false);
+                    await sendresponse(`User ID for $MENTION_${mention.uuid} is ${mention.uuid}.`, envelope, `${prefix}resolveid`, false);
                     return;
                 }
             } catch (err) {

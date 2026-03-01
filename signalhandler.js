@@ -144,10 +144,43 @@ function sendmessage(message, recipient, sender=undefined, props={}) {
             json.params.recipient = `${props.isselfcommand ? props.selfcommandsendto : recipient}`;
         }
         if (message) {
-            json.params.message = message;
-            if (message.includes('$MENTIONUSER')) {
-                const startofmention = message.indexOf('$MENTIONUSER');
-                json.params.mention = `${startofmention}:${"$MENTIONUSER".length}:${recipient}`
+            const mentions = [];
+            let processedMessage = message;
+            {
+                const regex = /\$MENTION_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+                let shift = 0;
+                let match;
+                while ((match = regex.exec(message)) !== null) {
+                    const token = match[0];
+                    const uuid = match[1];
+                    const startInProcessed = match.index + shift;
+                    mentions.push(`${startInProcessed}:${uuid.length}:${uuid}`);
+                    processedMessage = processedMessage.slice(0, startInProcessed) + uuid + processedMessage.slice(startInProcessed + token.length);
+                    shift += uuid.length - token.length;
+                }
+            }
+            {
+                const token = '$MENTIONUSER';
+                let built = '';
+                let remaining = processedMessage;
+                let absolutePos = 0;
+                while (true) {
+                    const idx = remaining.indexOf(token);
+                    if (idx === -1) {
+                        built += remaining;
+                        break;
+                    }
+                    built += remaining.slice(0, idx);
+                    mentions.push(`${absolutePos + idx}:${recipient.length}:${recipient}`);
+                    built += recipient;
+                    absolutePos += idx + recipient.length;
+                    remaining = remaining.slice(idx + token.length);
+                }
+                processedMessage = built;
+            }
+            json.params.message = processedMessage;
+            if (mentions.length > 0) {
+                json.params.mention = mentions;
             }
         } else {
             json.params.message = '';
