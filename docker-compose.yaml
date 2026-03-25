@@ -23,7 +23,7 @@ services:
         volumes:
             - ./:/app:rw
     mongodb:
-        image: mongodb/mongodb-community-server:latest
+        image: mongo:latest
         container_name: girlboss-mongodb
         user: mongodb
         volumes:
