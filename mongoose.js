@@ -165,10 +165,7 @@ function exportmodels(mongoosecon = mongoosefcon) {
     gameSchema.index({ players: 1 })
     pollSchema.index({ pollid: 1 }, { unique: true })
     featurereqSchema.index({ reqid: 1 }, { unique: true })
-    webhookSchema.index({ _id: 1 }, { unique: true })
     webhookSchema.index({ userid: 1 }, { unique: true })
-    stateSchema.index({ _id: 1 }, { unique: true })
-    ssoproviderSchema.index({ _id: 1 }, { unique: true })
     ssoproviderSchema.index({ key: 1 }, { unique: true })
 
     mongoose.model('User', userSchema).createIndexes()
