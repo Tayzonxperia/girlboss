@@ -1,4 +1,4 @@
-import LoadingIcon from "./loading-icon";
+import LoadingIcon from './loading-icon'
 
 export default function Loading({ page }: { page: string }) {
     return (
@@ -8,5 +8,5 @@ export default function Loading({ page }: { page: string }) {
                 <LoadingIcon />
             </div>
         </div>
-    );
-};
+    )
+}

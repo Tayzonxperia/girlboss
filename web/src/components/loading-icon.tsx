@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect } from 'react'
 
-declare module "react" {
+declare module 'react' {
     namespace JSX {
+        // noinspection JSUnusedGlobalSymbols
         interface IntrinsicElements {
             'l-grid': {
                 size?: string | number
@@ -13,12 +14,13 @@ declare module "react" {
 }
 
 export default function LoadingIcon() {
-  useEffect(() => {
-    async function getLoader() {
-      const { grid } = await import('ldrs')
-      grid.register();
-    }
-    getLoader();
-  }, [])
-  return <l-grid color="black"></l-grid>
+    useEffect(() => {
+        async function getLoader() {
+            const { grid } = await import('ldrs')
+            grid.register()
+        }
+        // noinspection JSIgnoredPromiseFromCall
+        getLoader()
+    }, [])
+    return <l-grid color="black"></l-grid>
 }

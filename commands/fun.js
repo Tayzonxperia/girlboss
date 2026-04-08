@@ -1,3 +1,6 @@
+// noinspection JSUnusedGlobalSymbols
+// noinspection JSUnusedLocalSymbols
+
 /*
 import axios from 'axios';
 const { sendresponse, sendmessage, getcontacts } = signalhandler;

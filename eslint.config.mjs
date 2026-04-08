@@ -1,5 +1,22 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import * as espree from 'espree'
+
+// noinspection JSUnusedGlobalSymbols
+const noopParser = {
+    parseForESLint() {
+        return {
+            ast: espree.parse('', {
+                ecmaVersion: 'latest',
+                sourceType: 'module',
+                range: true,
+                loc: true,
+                tokens: true,
+                comment: true,
+            }),
+        }
+    },
+}
 
 export default [
     {
@@ -7,10 +24,9 @@ export default [
             'node_modules/**',
             'web/node_modules/**',
             'data/**',
-            'config/attachments/**',
-            'config/avatars/**',
-            'config/stickers/**',
+            'config/**',
             'web/dist/**',
+            'web/.next/**',
         ],
     },
     {
@@ -42,5 +58,12 @@ export default [
             'no-misleading-character-class': 'off',
             'no-unreachable': 'off',
         },
+    },
+    {
+        files: ['web/src/**/*.{ts,tsx}', 'web/styles/**/*.css'],
+        languageOptions: {
+            parser: noopParser,
+        },
+        rules: {},
     },
 ]
