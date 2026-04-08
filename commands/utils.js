@@ -1,6 +1,6 @@
 import dns from 'dns/promises'
 import crypto from 'crypto';
-import { mongoose, redis, prefix, botname, phonenumber, sendresponse, sendmessage, parsecommand } from '../modulecontext.js'
+import { mongoose, redis, prefix, sendresponse, parsecommand } from '../modulecontext.js'
 
 export default {
     section: "utils",

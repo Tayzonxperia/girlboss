@@ -75,8 +75,10 @@ async function hotreloadable(mod) {
     return cm.module;
 }
 const mongoosemodule = await hotreloadable('./mongoose.js')
-const { exportmodels } = mongoosemodule
+const { exportmodels, bootstrapredis, bootstrapsendmessage, requestprotedit, approveprotedit, denyprotedit, getprotreq, listprotreqs, formatreqmessage } = mongoosemodule
 const mongoose = exportmodels()
 const redis = new Redis(rediscon);
+bootstrapredis(redis);
+bootstrapsendmessage(signalhandler.sendmessage, phonenumber);
 
-export { redis, mongoose, prefix, botname, phonenumber, managedaccount, sendresponse, sendmessage, getcontacts, getgroups, escapereg, parsecommand, hotreloadable }
+export { redis, mongoose, prefix, botname, phonenumber, managedaccount, sendresponse, sendmessage, getcontacts, getgroups, escapereg, parsecommand, hotreloadable, requestprotedit, approveprotedit, denyprotedit, getprotreq, listprotreqs, formatreqmessage }

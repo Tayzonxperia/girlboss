@@ -113,7 +113,7 @@ const usercommands = {
     },
     "subscribe": {
         description: `Subscribe to ${botname} broadcasts`,
-        arguments: ['true / false'],
+        arguments: ['true/false'],
         execute: async (envelope, message) => {
             try {
                 const User = mongoose.model('User');
@@ -387,7 +387,7 @@ const usercommands = {
                 }
                 const User = mongoose.model('User');
                 const user = await User.findOne({ userid: envelope.sourceUuid });
-                const avamods = modules.filter(m => m.user && !m.admin);
+                const avamods = modules.filter(m => m.user && !m.admin && !m.alwayson);
                 const enamods = user && user.properties && user.properties.tags ? user.properties.tags : [];
                 if (!match[1]) {
                     if (avamods.length === 0) {
@@ -580,20 +580,26 @@ const builtincommands = {
                         return true;
                     });
                     if (as.length > 0) {
+                        const alwayson = as.filter(s => s.alwayson);
                         const sect = as.filter(s => {
+                            if (s.alwayson) return false;
                             if (!user.properties || !user.properties.tags) return false;
                             return user.properties.tags.includes(s.section);
                         });
                         if (user.accesslevel === 1) {
                             const adminmod = modules.find(m => m.section === "admin");
-                            if (adminmod) {
-                                sect.push(adminmod);
+                            if (adminmod && !sect.includes(adminmod)) sect.push(adminmod);
+                        }
+                        if (alwayson.length > 0) {
+                            helpmessage += `\nAlways-on modules (use "${prefix}help <module>" to see commands):\n`;
+                            for (const s of alwayson) {
+                                helpmessage += `  - ${s.section}\n`;
                             }
                         }
                         if (sect.length === 0) {
-                            helpmessage += `You don't have any modules enabled. Add some with "${prefix}module"!`;
+                            helpmessage += `\nYou don't have any opt-in modules enabled. Add some with "${prefix}module"!`;
                         } else {
-                            helpmessage += `\nYou have the following modules enabled (use "-help <module>" to see the available commands):\n`;
+                            helpmessage += `\nEnabled modules (use "${prefix}help <module>" to see commands):\n`;
                             for (const s of sect) {
                                 helpmessage += `  - ${s.section}\n`;
                             }
@@ -679,8 +685,8 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
         }
     },
     "resolveid": {
-        description: "Resolve a Signal ID by mentioning a user or providing a UUID",
-        arguments: ['mention / userid'],
+        description: "Resolve a Signal ID by mentioning a user",
+        arguments: ['mention'],
         execute: async (envelope, message) => {
             try {
                 const dataMessage = envelope.dataMessage;
@@ -695,15 +701,8 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
                     } catch (err) {}
                 }
                 if (!mention) {
-                    const match = parsecommand(message);
-                    const uuidarg = match && match[1] ? match[1].trim() : null;
-                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                    if (uuidarg && uuidRegex.test(uuidarg)) {
-                        mention = { uuid: uuidarg };
-                    }
-                }
-                if (!mention && !envelope.syncMessage) {
-                    await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" or "-resolveid <userid>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
+                        await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
+                        return;
                     return;
                 } else if (!mention && envelope.syncMessage) {
                     const syncMessage = envelope.syncMessage;
@@ -718,15 +717,16 @@ Based on tritiumbotv2 by Aria Arctic (https://git.zeusteam.dev/aria/tritiumbotv2
                 }
                 const User = mongoose.model('User');
                 const user = await User.findOne({ userid: mention.uuid });
+                envelope.sourceUuid = mention.uuid;
                 if (!user) {
-                    await sendresponse(`User ID for $MENTION_${mention.uuid} is ${mention.uuid} (${botname} doesn't know this user).`, envelope, `${prefix}resolveid`, false);
+                    await sendresponse('Invalid arguments.\nUse "-resolveid <@mention>" to resolve a Signal ID.', envelope, `${prefix}resolveid`, true);
                     return;
                 } else {
                     await sendresponse(`User ID for $MENTION_${mention.uuid} is ${mention.uuid}.`, envelope, `${prefix}resolveid`, false);
                     return;
                 }
             } catch (err) {
-                console.error(err);
+                    await sendresponse(`User ID for $MENTIONUSER is ${mention.uuid} (${botname} doesn't know this user).`, envelope, `${prefix}resolveid`, false);
             }
         }
     }
@@ -819,6 +819,13 @@ async function invokecommand(command, envelope, self = false) {
         if (mod.admin && (!user || user.accesslevel !== 1)) {
             await sendresponse(`Unknown command: ${command}`, envelope, command, true);
             return;
+        }
+        if (!mod.alwayson && mod.user && !mod.admin) {
+            const tags = user && user.properties && user.properties.tags ? user.properties.tags : [];
+            if (!tags.includes(mod.section)) {
+                await sendresponse(`Unknown command: ${command}\n(Hint: this command is part of the "${mod.section}" module, enable it with "${prefix}module ${mod.section} enable")`, envelope, command, true);
+                return;
+            }
         }
         await cmdobj.execute(envelope, message);
         return;
