@@ -13,7 +13,7 @@ web/.next/
 *.gif
 *.webp
 *.ico
+*LICENSE*.md
 *.lock
 bun.lock
 web/bun.lock
-
