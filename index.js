@@ -24,7 +24,7 @@ const tagname = config.tagname || 'Development'
 const botavatar = config.botavatar
 const botabout = config.botabout || 'A simple, fast, and robust bot for Signal, powered by TritiumBot.'
 const phonenumber = config.phonenumber
-const externalsignal = config.externalsignal || true
+const externalsignal = config.externalsignal ?? true
 config = undefined
 let daemon
 

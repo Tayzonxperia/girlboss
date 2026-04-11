@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import * as espree from 'espree'
+import tsParser from '@typescript-eslint/parser'
 
 // noinspection JSUnusedGlobalSymbols
 const noopParser = {
@@ -60,7 +61,19 @@ export default [
         },
     },
     {
-        files: ['web/src/**/*.{ts,tsx}', 'web/styles/**/*.css'],
+        files: ['web/src/**/*.{ts,tsx}'],
+        languageOptions: {
+            parser: tsParser,
+            parserOptions: {
+                ecmaFeatures: {
+                    jsx: true,
+                },
+            },
+        },
+        rules: {},
+    },
+    {
+        files: ['web/styles/**/*.css'],
         languageOptions: {
             parser: noopParser,
         },

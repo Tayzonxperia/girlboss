@@ -72,7 +72,7 @@ export default {
             execute: async (envelope, message) => {
                 try {
                     const match = parsecommand(message)
-                    if (!match) {
+                    if (!match || !match[1] || !match[2] || !match[3]) {
                         await sendresponse(
                             'Invalid arguments.\nUse "-proxymsg [signalid] [bot] [message]" to proxy a message to another user.',
                             envelope,
@@ -84,9 +84,9 @@ export default {
                     const tui = match[1]
                     const bot = match[2]
                     const proxmsg = match[3]
-                    if (!tui || !proxmsg) {
+                    if (!tui || !proxmsg || (bot !== 'true' && bot !== 'false')) {
                         await sendresponse(
-                            'Invalid arguments.\nUse "-proxymsg [signalid] [bot] [message]" to proxy a message to another user.',
+                            'Invalid arguments.\nUse "-proxymsg [signalid] [bot] [message]" where [bot] is true or false.',
                             envelope,
                             `${prefix}proxymsg`,
                             true
@@ -126,7 +126,17 @@ export default {
                         return
                     }
                     const tui = match[1]
-                    const nt = match[2].split(/\s+/).filter(Boolean)
+                    const tags = match[2]
+                    if (!tui || !tags) {
+                        await sendresponse(
+                            'Invalid arguments.\nUse "-changetags [userid] "[tags]"" to set tags for a user.',
+                            envelope,
+                            `${prefix}changetags`,
+                            true
+                        )
+                        return
+                    }
+                    const nt = tags.split(/\s+/).filter(Boolean)
                     const User = mongoose.model('User')
                     let userobject = await User.findOne({ userid: tui })
                     if (!userobject) {
@@ -197,8 +207,10 @@ export default {
                         if (Array.isArray(contacts)) {
                             contact = contacts.find((c) => c.uuid === user.userid)
                         }
-                        const profile = contact ? contact.profile : {}
-                        const name = profile.givenName + (profile.familyName ? ` ${profile.familyName}` : '')
+                        const profile = contact && contact.profile ? contact.profile : {}
+                        const name = profile.givenName
+                            ? profile.givenName + (profile.familyName ? ` ${profile.familyName}` : '')
+                            : 'Unknown'
                         if (profile.givenName && (!user.username || user.username !== profile.givenName)) {
                             user.username = profile.givenName + (profile.familyName ? ` ${profile.familyName}` : '')
                             user.save().catch((err) => console.error('Failed to save username:', err))
@@ -207,7 +219,7 @@ export default {
                             userid: user.userid,
                             accesslevel: user.accesslevel,
                             tags: user.properties ? user.properties.tags : [],
-                            name: name ? name : 'Unknown',
+                            name,
                         }
                     })
                     let ul = 'Users:\n'
@@ -228,14 +240,8 @@ export default {
         getgroups: {
             description: 'Get all groups from signal-cli',
             arguments: null,
-            execute: async (envelope, message) => {
+            execute: async (envelope) => {
                 try {
-                    const User = mongoose.model('User')
-                    const users = await User.find({})
-                    if (users.length === 0) {
-                        await sendresponse('No users found in the database.', envelope, `${prefix}getusers`, true)
-                        return
-                    }
                     let groups
                     try {
                         groups = await getgroups()
@@ -244,7 +250,7 @@ export default {
                         await sendresponse(
                             'Failed to retrieve groups. Please check the logs for more information.',
                             envelope,
-                            `${prefix}getusers`,
+                            `${prefix}getgroups`,
                             true
                         )
                         return
@@ -254,18 +260,25 @@ export default {
                         await sendresponse(
                             'Invalid groups data received. Please check the logs for more information.',
                             envelope,
-                            `${prefix}getusers`,
+                            `${prefix}getgroups`,
                             true
                         )
                         return
                     }
-                    for (const group of groups) {
-                        console.log(`Group: ${group}`)
+                    if (groups.length === 0) {
+                        await sendresponse('No groups found.', envelope, `${prefix}getgroups`, true)
+                        return
                     }
-
+                    let gm = 'Groups:\n'
+                    groups.forEach((group) => {
+                        const groupid = group.id || group.groupId || '(unknown-id)'
+                        const title = group.name || group.title || '(untitled)'
+                        gm += `- ${title} (${groupid})\n`
+                    })
+                    await sendresponse(gm.trim(), envelope, `${prefix}getgroups`, false)
                 } catch (err) {
                     await sendresponse(
-                        'Failed to retrieve users. Please try again later.',
+                        'Failed to retrieve groups. Please try again later.',
                         envelope,
                         `${prefix}getgroups`,
                         true
@@ -486,7 +499,7 @@ export default {
         jitsi: {
             description: 'Generate a CTC Jitsi link',
             arguments: null,
-            execute: async (envelope, message) => {
+            execute: async (envelope) => {
                 try {
                     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
                     const code = Array.from(
@@ -509,7 +522,7 @@ export default {
         listfrs: {
             description: 'List all feature requests',
             arguments: null,
-            execute: async (envelope, message) => {
+            execute: async (envelope) => {
                 try {
                     const FeatureReq = mongoose.model('FeatureReq')
                     const frs = await FeatureReq.find({})

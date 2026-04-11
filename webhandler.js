@@ -15,7 +15,7 @@ const redis = new Redis(rediscon)
 const signalhandler = await import('./signalhandler.js')
 
 redis.on('error', (err) => {
-    //console.error('Redis connection error:', err);
+    console.error('Redis connection error:', err)
 })
 
 redis.on('connect', () => {
@@ -24,11 +24,10 @@ redis.on('connect', () => {
 
 export async function initialisewebhookhandler() {
     try {
-        redis.subscribe('webhook-messages', (err, count) => {
+        redis.subscribe('webhook-messages', (err) => {
             if (err) {
-                //console.error('Failed to subscribe to webhook messages:', err);
+                console.error('Failed to subscribe to webhook messages:', err)
             }
-            //console.log(`Subscribed to ${count} webhook channels`);
         })
 
         redis.on('message', async (channel, message) => {
