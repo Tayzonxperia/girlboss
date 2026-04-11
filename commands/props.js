@@ -12,7 +12,7 @@ import {
     listprotreqs,
     formatreqmessage,
     requestprotedit,
-} from '../modulecontext.js'
+} from '../core/modulecontext.js'
 
 export default {
     section: 'props',
@@ -194,7 +194,7 @@ export default {
                             if (freshuser && freshuser.protectedprops && freshuser.protectedprops.test) {
                                 delete freshuser.protectedprops.test
                                 freshuser.markModified('protectedprops')
-                                const { redis } = await import('../modulecontext.js')
+                                const { redis } = await import('../core/modulecontext.js')
                                 await redis.set(`auth-challenge-ok:${freshuser.userid}`, '1', 'EX', 30)
                                 await freshuser.save()
                             }

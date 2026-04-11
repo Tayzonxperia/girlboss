@@ -7,6 +7,9 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "start": "bun run index.js",
+        "migrate": "node db/migrations/cli.js run",
+        "migrate:status": "node db/migrations/cli.js status",
+        "migrate:list": "node db/migrations/cli.js list",
         "format": "prettier --write \"**/*.{js,mjs,cjs,ts,tsx,json,jsonc,md,yml,yaml}\"",
         "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,tsx,json,jsonc,md,yml,yaml}\"",
         "lint": "eslint .",

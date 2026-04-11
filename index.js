@@ -1,11 +1,11 @@
 import fs from 'fs'
 import subprocess from 'child_process'
 import net from 'net'
-import { interpretmessage, trustfix, wipeattachments } from './signalhandler.js'
-import { initialisewebhookhandler } from './webhandler.js'
 import { parse } from 'jsonc-parser'
+import { exportmodels, buildindexes } from './core/mongoose.js'
+import { runmigrations } from './db/migrations/runner.js'
 
-/** @typedef {import('./botconfig.types.js').BotConfig} BotConfig */
+/** @typedef {import('./types/botconfig.types.js').BotConfig} BotConfig */
 
 /** @type {BotConfig} */
 let config = /** @type {BotConfig} */ (parse(fs.readFileSync('config.jsonc', 'utf8')))
@@ -27,6 +27,10 @@ const phonenumber = config.phonenumber
 const externalsignal = config.externalsignal ?? true
 config = undefined
 let daemon
+let interpretmessage
+let trustfix
+let wipeattachments
+let initialisewebhookhandler
 
 function startconn(client, callback) {
     if (socketpath.includes(':')) {
@@ -135,8 +139,31 @@ function setupbotprofile() {
     wipeattachments()
 }
 
-function main() {
+async function runbootmigrations() {
+    try {
+        const mongoose = await exportmodels()
+        await mongoose.connection.asPromise()
+        await buildindexes(mongoose)
+        const result = await runmigrations(mongoose, {
+            appliedby: 'system:boot',
+            continueonerror: true,
+        })
+        console.log(
+            `[migrations] discovered=${result.total} pending=${result.pending} executed=${result.executed} failed=${result.failed} skipped=${result.skipped}`
+        )
+    } catch (error) {
+        console.error('[migrations] Failed to run startup migrations:', error)
+    }
+}
+
+async function main() {
     console.log(`${botname} starting...`)
+    await runbootmigrations()
+    const signalhandler = await import('./core/signalhandler.js')
+    interpretmessage = signalhandler.interpretmessage
+    trustfix = signalhandler.trustfix
+    wipeattachments = signalhandler.wipeattachments
+    ;({ initialisewebhookhandler } = await import('./core/webhandler.js'))
     daemon = signalclidaemon()
     initialisewebhookhandler().catch((err) => {
         console.error('Failed to start webhook handler:', err)
@@ -169,4 +196,7 @@ function main() {
     }
 }
 
-main()
+main().catch((error) => {
+    console.error('Fatal startup error:', error)
+    process.exit(1)
+})

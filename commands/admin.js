@@ -11,7 +11,8 @@ import {
     getcontacts,
     getgroups,
     parsecommand,
-} from '../modulecontext.js'
+} from '../core/modulecontext.js'
+import { listmigrationdefinitions, runmigrations, summarizesmigrationstatus } from '../db/migrations/runner.js'
 
 export default {
     section: 'admin',
@@ -767,23 +768,138 @@ export default {
             },
         },
         migration: {
-            description: 'Perform a database migration (set up the migration in this commands execute section first)',
-            arguments: null,
+            description: 'View and execute database migrations',
+            arguments: ['status | list | run [name] | logs'],
             execute: async (envelope, message) => {
-                await sendresponse(
-                    "A migration isn't set up yet, please set one up in this command's execute section.",
-                    envelope,
-                    `${prefix}migration`,
-                    true
-                )
-                /*
                 try {
-                    const User = mongoose.model('User')
-                    const users = await User.find({})
-                    if (users.length === 0) {
-                        await sendresponse('No users found in the database.', envelope, `${prefix}migration`, true)
+                    const match = parsecommand(message)
+                    const subcommand = (match?.[1] || 'status').toLowerCase()
+                    const MigrationRegistry = mongoose.model('MigrationRegistry')
 
+                    if (subcommand === 'status') {
+                        const summary = await summarizesmigrationstatus(mongoose)
+                        const last = summary.lastcompleted?.completedat
+                            ? new Date(summary.lastcompleted.completedat).toISOString()
+                            : 'never'
+                        const failedlines = summary.failed.map((entry) => {
+                            const when = entry.failedat ? new Date(entry.failedat).toISOString() : 'unknown-time'
+                            return `- ${entry.file} (${when})`
+                        })
+                        const output = [
+                            `Discovered migrations: ${summary.totals.discovered}`,
+                            `Completed: ${summary.totals.completed}`,
+                            `Pending: ${summary.totals.pending}`,
+                            `Failed: ${summary.totals.failed}`,
+                            `Last completed: ${last}`,
+                            failedlines.length > 0 ? `Recent failures:\n${failedlines.join('\n')}` : 'Recent failures: none',
+                        ].join('\n')
+                        await sendresponse(output, envelope, `${prefix}migration status`, false)
+                        return
                     }
+
+                    if (subcommand === 'list') {
+                        const [definitions, rows] = await Promise.all([
+                            listmigrationdefinitions(),
+                            MigrationRegistry.find({}).sort({ completedat: -1, startedat: -1 }).lean(),
+                        ])
+                        if (definitions.length === 0) {
+                            await sendresponse('No migration files found.', envelope, `${prefix}migration list`, true)
+                            return
+                        }
+                        const byfile = new Map(rows.map((entry) => [entry.file, entry]))
+                        const lines = definitions.map((entry) => {
+                            const record = byfile.get(entry.file)
+                            const status = record?.status || 'pending'
+                            const ts = record?.completedat || record?.failedat || record?.startedat || entry.timestamp
+                            return `- ${entry.file} [${status}] (${new Date(ts).toISOString()})`
+                        })
+                        await sendresponse(
+                            `Recent migration records:\n${lines.join('\n')}`,
+                            envelope,
+                            `${prefix}migration list`,
+                            false
+                        )
+                        return
+                    }
+
+                    if (subcommand === 'run') {
+                        const target = match?.[2]
+                        if (!target) {
+                            await sendresponse(
+                                `Invalid arguments.\nUse "${prefix}migration run [timestamp-or-file]".`,
+                                envelope,
+                                `${prefix}migration run`,
+                                true
+                            )
+                            return
+                        }
+                        const result = await runmigrations(mongoose, {
+                            only: [target],
+                            appliedby: envelope.sourceUuid || 'admin:unknown',
+                            continueonerror: false,
+                            retryfailed: true,
+                        })
+                        if (result.total === 0) {
+                            await sendresponse(
+                                `No migration file found matching "${target}".`,
+                                envelope,
+                                `${prefix}migration run`,
+                                true
+                            )
+                            return
+                        }
+                        if (result.executed === 0 && result.failed === 0) {
+                            await sendresponse(
+                                `Migration "${target}" is already completed.`,
+                                envelope,
+                                `${prefix}migration run`,
+                                false
+                            )
+                            return
+                        }
+                        if (result.failed > 0) {
+                            await sendresponse(
+                                `Migration run failed for "${target}". Check logs with "${prefix}migration logs".`,
+                                envelope,
+                                `${prefix}migration run`,
+                                true
+                            )
+                            return
+                        }
+                        await sendresponse(
+                            `Migration "${target}" completed successfully.`,
+                            envelope,
+                            `${prefix}migration run`,
+                            false
+                        )
+                        return
+                    }
+
+                    if (subcommand === 'logs') {
+                        const rows = await MigrationRegistry.find({ status: 'failed' }).sort({ failedat: -1 }).limit(5)
+                        if (rows.length === 0) {
+                            await sendresponse('No failed migration logs found.', envelope, `${prefix}migration logs`, false)
+                            return
+                        }
+                        const logs = rows.map((entry) => {
+                            const shorterror = (entry.error || 'unknown error').slice(0, 240)
+                            return `- ${entry.file}: ${shorterror}`
+                        })
+                        await sendresponse(
+                            `Recent failed migrations:\n${logs.join('\n')}`,
+                            envelope,
+                            `${prefix}migration logs`,
+                            false
+                        )
+                        return
+                    }
+
+                    await sendresponse(
+                        `Invalid arguments.\nUse "${prefix}migration status", "${prefix}migration list", "${prefix}migration run [name]", or "${prefix}migration logs".`,
+                        envelope,
+                        `${prefix}migration`,
+                        true
+                    )
                 } catch (err) {
                     console.error(err)
                     await sendresponse(
@@ -793,7 +909,6 @@ export default {
                         true
                     )
                 }
-                */
             },
         },
         mksso: {

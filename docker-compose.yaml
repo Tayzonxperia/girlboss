@@ -2,7 +2,7 @@ services:
     signal:
         build:
             context: .
-            dockerfile: ./Signal.Dockerfile
+            dockerfile: ./docker/Signal.Dockerfile
         container_name: girlboss-signal
         restart: unless-stopped
         networks:
@@ -16,7 +16,7 @@ services:
     tritium:
         build:
             context: .
-            dockerfile: ./Tritium.Dockerfile
+            dockerfile: ./docker/Tritium.Dockerfile
         container_name: girlboss-tritium
         restart: unless-stopped
         networks:
@@ -45,7 +45,7 @@ services:
     web:
         build:
             context: .
-            dockerfile: ./Web.Dockerfile
+            dockerfile: ./docker/Web.Dockerfile
         container_name: girlboss-web
         restart: unless-stopped
         ports:
@@ -55,7 +55,8 @@ services:
         volumes:
             - ./web/:/app/web:rw
             - ./config.jsonc:/app/config.jsonc:r
-            - ./mongoose.js:/app/mongoose.js:r
+            - ./core/mongoose.js:/app/core/mongoose.js:r
+            - ./db/schemas:/app/db/schemas:r
 
 networks:
     girlboss-network:

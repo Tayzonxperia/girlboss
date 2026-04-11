@@ -2,7 +2,7 @@ import { serve } from 'bun'
 import index from './index.html'
 import { parse as parseJsonc } from 'jsonc-parser'
 import fs from 'fs'
-import { exportmodels } from '../../mongoose.js'
+import { exportmodels } from '../../core/mongoose.js'
 import Redis from 'ioredis'
 
 let config = parseJsonc(fs.readFileSync('../config.jsonc', 'utf8'))
@@ -10,8 +10,12 @@ const mongoosecon = config.mongoosecon
 const rediscon = config.rediscon || 'redis://localhost:6379'
 config = undefined
 
-const mongoose = exportmodels(mongoosecon)
+const mongoosePromise = exportmodels(mongoosecon)
 const redis = new Redis(rediscon)
+
+async function getmongoose() {
+    return mongoosePromise
+}
 
 redis.on('error', (err) => {
     console.error('Problem initialising ioredis:', err)
@@ -47,6 +51,7 @@ function isLoginBody(body: unknown): body is LoginBody {
 async function handleerr0r(err: unknown, module: string) {
     if (process.env.WEBHOOK_ID) {
         try {
+            const mongoose = await getmongoose()
             const Webhook = mongoose.model('Webhook')
             const webhook = await Webhook.findById(process.env.WEBHOOK_ID)
             if (webhook) {
@@ -72,6 +77,7 @@ async function handleerr0r(err: unknown, module: string) {
 
 async function checkauthvalidity(authkey: string) {
     try {
+        const mongoose = await getmongoose()
         const User = mongoose.model('User')
         if (!authkey) {
             return { failed: true, message: 'No AuthKey sent?' }
@@ -221,6 +227,7 @@ const server = serve({
                         { status: 500 }
                     )
                 } else if (!validity.failed && validity.attestation) {
+                    const mongoose = await getmongoose()
                     const User = mongoose.model('User')
                     const user = await User.findOne({ userid: validity.user.userid })
                     const bc = [
@@ -335,6 +342,7 @@ const server = serve({
         '/api/webhook/:hook': {
             async POST(req) {
                 try {
+                    const mongoose = await getmongoose()
                     const hook = req.params.hook
                     if (!hook) {
                         return Response.json({ error: 'No webhook ID provided' }, { status: 400 })
@@ -384,6 +392,7 @@ const server = serve({
         '/api/sso/start': {
             async GET(req) {
                 try {
+                    const mongoose = await getmongoose()
                     const SSOProvider = mongoose.model('SSOProvider')
                     const bearer = req.headers.get('Authorization')
                     if (!bearer) {
@@ -414,6 +423,7 @@ const server = serve({
         '/api/sso/finish': {
             async POST(req) {
                 try {
+                    const mongoose = await getmongoose()
                     const SSOProvider = mongoose.model('SSOProvider')
                     const bearer = req.headers.get('Authorization')
                     if (!bearer) {

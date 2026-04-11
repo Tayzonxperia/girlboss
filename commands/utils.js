@@ -3,7 +3,7 @@
 
 import dns from 'dns/promises'
 import crypto from 'crypto'
-import { mongoose, redis, prefix, sendresponse, parsecommand } from '../modulecontext.js'
+import { mongoose, redis, prefix, sendresponse, parsecommand } from '../core/modulecontext.js'
 
 const utils = {
     section: 'utils',

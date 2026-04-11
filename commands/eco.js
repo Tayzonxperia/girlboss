@@ -1,7 +1,7 @@
 // noinspection JSUnusedGlobalSymbols
 // noinspection JSUnusedLocalSymbols
 
-import { mongoose, prefix, phonenumber, sendresponse, sendmessage, parsecommand } from '../modulecontext.js'
+import { mongoose, prefix, phonenumber, sendresponse, sendmessage, parsecommand } from '../core/modulecontext.js'
 
 export default {
     section: 'eco',
