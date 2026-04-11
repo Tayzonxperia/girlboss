@@ -6,7 +6,7 @@
       "name": "dev.nova.tritiumbotv2",
       "dependencies": {
         "@axiomhq/js": "^1.6.0",
-        "axios": "^1.14.0",
+        "axios": "^1.15.0",
         "ioredis": "^5.10.1",
         "jsonc-parser": "^3.3.1",
         "moment-timezone": "^0.6.1",
@@ -19,7 +19,7 @@
         "eslint": "^9.39.4",
         "espree": "^11.2.0",
         "globals": "^16.5.0",
-        "prettier": "^3.8.1",
+        "prettier": "^3.8.2",
       },
     },
   },
